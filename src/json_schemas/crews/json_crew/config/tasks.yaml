@@ -1,0 +1,38 @@
+analyze_configurations:
+  description: >
+    Analyze the configurations of a Keboola Connection component {component_id} and select at most {number_of_samples} 
+    samples that are most likely to be used in a data pipeline. Select configurations that
+    represent different use cases. Maintain great diversity in the samples.
+    Omit configurations that are clearly duplicates or serve no purpose.
+    Omit configuration that are just for testing purposes.
+    Prefer configurations that have newer job_start_at.
+  expected_output: >
+    A list of JSON configurations of the Keboola Connection component {component_id}. 
+  agent: configuration_analyst
+  context: []
+
+sanitize_configurations:
+  description: >
+    Given a JSON configuration of a Keboola Connection, prepare the configuration 
+    for the purpose of training a machine learning model. Replace all sensitive data naming specific 
+    entities with generic names (e.g. replace company names with `Company`, user names with 'John Doe' etc.). 
+    If the configuration contains multiple instances of the same entity (e.g. columns, tables, etc.), keep 
+    only one instance. Keep all instances of processors entity. 
+    Replace all values of JSON keys starting with `#` with the string `<secret>`.
+    Replace all other secrets (such as API keys, passwords, keys, certificates, etc.) with the 
+    string `<redacted>`. NEVER change the `component_id`.
+  expected_output: >
+    A JSON configuration of the Keboola Connection component {component_id}.
+  agent: data_sanitization_specialist
+  context: ['analyze_configurations']
+
+generate_training_data:
+  description: >
+    Generate training data a few-shot examples of the configuration for a given component. The training data is
+    a list of examples that are used to provide examples for a LLM to learn how to generate similar configurations.
+  expected_output: >
+    JSONl data with examples for a few-shot learning for {component_id}. 
+    Each row must contain fields `component_id`, `config_example` and `config_row_example`. Do not put in 
+    any comments or other text, only valid JSON. The entire output must be valid JSONl.
+  agent: training_data_generator
+  context: ['sanitize_configurations']
